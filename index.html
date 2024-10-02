@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meetingraum Buchung</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #F5F5F5;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            background-color: #84BD22;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            margin: 0;
+            color: #fff;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .date-header {
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        .time-block {
+            border: 1px solid #299E8E;
+            border-radius: 5px;
+            padding: 20px;
+            transition: background-color 0.3s;
+            cursor: pointer;
+            background-color: #84BD22;
+            text-align: center;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            color: black;
+        }
+        .booked {
+            background-color: #fff;
+            color: #299E8E;
+        }
+        .modal, .confirm-modal, .cancel-confirm-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content, .confirm-modal-content, .cancel-confirm-modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 600px; /* Breite des Modals */
+            height: 400px; /* Höhe des Buchungsdetails-Fensters */
+            text-align: center;
+            position: relative;
+        }
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #299E8E;
+        }
+        .btn-group, .modal-footer {
+            display: flex;
+            justify-content: space-evenly; /* Gleichmäßige Verteilung */
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 10px 20px;
+            background-color: #84BD22;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            height: 40px;
+            flex-grow: 1;
+            margin: 0 5px;
+        }
+        .btn:hover {
+            background-color: #299E8E;
+        }
+        .close-btn {
+            background-color: #299E8E;
+            margin-top: 20px;
+        }
+        .feedback-popup {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #84BD22;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+        }
+        .room-details {
+            margin-top: 20px;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: left;
+        }
+        .room-details p {
+            margin: 0;
+        }
+        .booking-overview {
+            margin-top: 30px;
+        }
+        .booking-overview table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .booking-overview th, .booking-overview td {
+            padding: 10px;
+            border: 1px solid #299E8E;
+            text-align: left;
+        }
+        .booking-overview th {
+            background-color: #299E8E;
+            color: white;
+        }
+        .date-navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .date-navigation button {
+            background-color: #299E8E;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px;
+            cursor: pointer;
+        }
+        .date-navigation button:hover {
+            background-color: #84BD22;
+        }
+        /* Stil für Eingabefelder im Buchungsdetails-Fenster */
+        input[type="text"],
+        input[type="number"] {
+            width: calc(100% - 22px); /* Die Breite auf 100% minus Padding setzen */
+            padding: 10px; /* Innenabstand hinzufügen */
+            border: 1px solid #ccc; /* Rahmen hinzufügen */
+            border-radius: 5px; /* Ecken abrunden */
+            margin-bottom: 10px; /* Abstand nach unten */
+            font-size: 1em; /* Schriftgröße */
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Meetingraum 1 - Buchungssystem</h1>
+    </header>
+    <div class="container">
+        <div class="date-navigation">
+            <button id="prevDay">&lt; Vorheriger Tag</button>
+            <div class="date-header" id="currentDate"></div>
+            <button id="nextDay">Nächster Tag &gt;</button>
+        </div>
+        <h2>Buchbare Zeiten</h2>
+        <div class="grid" id="timeSlots">
+            <!-- Zeitblöcke werden hier dynamisch hinzugefügt -->
+        </div>
+        <div class="room-details">
+            <p><strong>Maximale Teilnehmerzahl:</strong> 20</p>
+            <p><strong>Technische Ausstattung:</strong> Beamer, Whiteboard, Video-Konferenzsystem</p>
+            <p><strong>Snacks & Getränke:</strong> Verfügbar</p>
+        </div>
+
+        <!-- Buchungsübersicht -->
+        <div class="booking-overview">
+            <h2>Aktuelle Buchungen</h2>
+            <table id="bookingTable">
+                <thead>
+                    <tr>
+                        <th>Slot</th>
+                        <th>Name</th>
+                        <th>Abteilung</th>
+                        <th>Teilnehmer</th>
+                        <th>Art</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Buchungen werden hier dynamisch hinzugefügt -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Buchungs-Modal -->
+    <div class="modal" id="bookingModal">
+        <div class="modal-content">
+            <span class="close" id="closeBookingModal">&times;</span>
+            <h3>Buchungsdetails eingeben</h3>
+            <input type="text" id="nameInput" placeholder="Name" required><br>
+            <input type="text" id="departmentInput" placeholder="Abteilung" required><br>
+            <input type="number" id="participantsInput" placeholder="Teilnehmerzahl" required><br>
+            <h4>Intern oder extern?</h4>
+            <div class="btn-group">
+                <button class="btn" id="internalBtn">Intern</button>
+                <button class="btn" id="externalBtn">Extern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bestätigungsmodal -->
+    <div class="confirm-modal" id="confirmModal">
+        <div class="confirm-modal-content">
+            <span class="close" id="closeConfirmModal">&times;</span>
+            <h3>Sind Sie sicher, dass Sie diesen Slot buchen möchten?</h3>
+            <p id="confirmDetails"></p>
+            <div class="modal-footer">
+                <button class="btn" id="confirmBooking">Ja, buchen</button>
+                <button class="btn close-btn" id="cancelBooking">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stornierungs-Bestätigungsmodal -->
+    <div class="cancel-confirm-modal" id="cancelConfirmModal">
+        <div class="cancel-confirm-modal-content">
+            <span class="close" id="closeCancelConfirmModal">&times;</span>
+            <h3>Sind Sie sicher, dass Sie diese Buchung stornieren möchten?</h3>
+            <p id="cancelDetails"></p>
+            <div class="modal-footer">
+                <button class="btn" id="confirmCancel">Ja, stornieren</button>
+                <button class="btn close-btn" id="cancelCancel">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="feedback-popup" id="feedbackPopup"></div>
+
+    <script>
+        const currentDateElement = document.getElementById('currentDate');
+        const timeSlotsContainer = document.getElementById('timeSlots');
+        let currentDate = new Date();
+        
+        // Aktuellen Datum anzeigen
+        function updateDateDisplay() {
+            currentDateElement.textContent = currentDate.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        // Dynamisch Zeitblöcke generieren
+        function generateTimeSlots() {
+            timeSlotsContainer.innerHTML = '';
+            const timeSlots = [];
+            for (let hour = 8; hour < 18; hour++) {
+                timeSlots.push(`${hour}:00 - ${hour}:30`);
+                timeSlots.push(`${hour}:30 - ${hour + 1}:00`);
+            }
+            // Dynamisch Zeitblöcke hinzufügen
+            timeSlots.forEach((slot) => {
+                const slotElement = document.createElement('div');
+                slotElement.classList.add('time-block');
+                slotElement.textContent = slot;
+                slotElement.addEventListener('click', () => {
+                    const isBooked = slotElement.classList.contains('booked');
+                    if (!isBooked) {
+                        openBookingModal(slot);
+                    } else {
+                        openCancelConfirmModal(slot); // Stornierungsmodal öffnen, wenn gebucht
+                    }
+                });
+                timeSlotsContainer.appendChild(slotElement);
+            });
+        }
+
+        // Buchungsmodal öffnen
+        let selectedSlot = null;
+        function openBookingModal(slot) {
+            selectedSlot = slot;
+            document.getElementById('bookingModal').style.display = 'flex';
+        }
+
+        // Modal schließen
+        function closeBookingModal() {
+            document.getElementById('bookingModal').style.display = 'none';
+            clearBookingInputs();
+        }
+
+        function clearBookingInputs() {
+            document.getElementById('nameInput').value = '';
+            document.getElementById('departmentInput').value = '';
+            document.getElementById('participantsInput').value = '';
+        }
+
+        // Bestätigungsmodal öffnen
+        document.getElementById('closeBookingModal').onclick = closeBookingModal;
+        document.getElementById('internalBtn').onclick = () => handleBooking('intern');
+        document.getElementById('externalBtn').onclick = () => handleBooking('extern');
+
+        let bookingDetails = {};
+        function handleBooking(type) {
+            bookingDetails = {
+                name: document.getElementById('nameInput').value,
+                department: document.getElementById('departmentInput').value,
+                participants: document.getElementById('participantsInput').value,
+                type: type,
+                slot: selectedSlot
+            };
+
+            document.getElementById('confirmDetails').textContent = `Slot: ${bookingDetails.slot}, Name: ${bookingDetails.name}, Abteilung: ${bookingDetails.department}, Teilnehmer: ${bookingDetails.participants}, Art: ${bookingDetails.type}`;
+            document.getElementById('bookingModal').style.display = 'none';
+            document.getElementById('confirmModal').style.display = 'flex';
+        }
+
+        document.getElementById('closeConfirmModal').onclick = () => document.getElementById('confirmModal').style.display = 'none';
+        document.getElementById('closeCancelConfirmModal').onclick = () => document.getElementById('cancelConfirmModal').style.display = 'none';
+
+        // Buchung bestätigen
+        document.getElementById('confirmBooking').onclick = () => {
+            addBookingToTable(bookingDetails);
+            document.getElementById('confirmModal').style.display = 'none';
+            showFeedbackPopup("Buchung erfolgreich!");
+            updateTimeSlot(selectedSlot, true);
+            closeBookingModal();
+        };
+
+        function showFeedbackPopup(message) {
+            const feedbackPopup = document.getElementById('feedbackPopup');
+            feedbackPopup.textContent = message;
+            feedbackPopup.style.display = 'block';
+            setTimeout(() => {
+                feedbackPopup.style.display = 'none';
+            }, 3000);
+        }
+
+        function addBookingToTable(details) {
+            const tableBody = document.querySelector('#bookingTable tbody');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${details.slot}</td>
+                <td>${details.name}</td>
+                <td>${details.department}</td>
+                <td>${details.participants}</td>
+                <td>${details.type}</td>
+            `;
+            tableBody.appendChild(row);
+        }
+
+        function updateTimeSlot(slot, isBooked) {
+            const slotElements = document.querySelectorAll('.time-block');
+            slotElements.forEach(el => {
+                if (el.textContent === slot) {
+                    if (isBooked) {
+                        el.classList.add('booked');
+                        el.style.cursor = 'not-allowed'; // Zeiger ändern, wenn gebucht
+                    } else {
+                        el.classList.remove('booked');
+                        el.style.cursor = 'pointer'; // Zeiger ändern, wenn verfügbar
+                    }
+                }
+            });
+        }
+
+        // Stornierungsmodal öffnen
+        const openCancelConfirmModal = (slot) => {
+            const row = Array.from(document.querySelectorAll('#bookingTable tbody tr')).find(r => r.cells[0].textContent === slot);
+            const details = {
+                slot: slot,
+                name: row.cells[1].textContent,
+                department: row.cells[2].textContent,
+                participants: row.cells[3].textContent,
+                type: row.cells[4].textContent,
+            };
+            document.getElementById('cancelDetails').textContent = `Slot: ${details.slot}, Name: ${details.name}, Abteilung: ${details.department}, Teilnehmer: ${details.participants}, Art: ${details.type}`;
+            document.getElementById('cancelConfirmModal').style.display = 'flex';
+        };
+
+        document.getElementById('cancelCancel').onclick = () => document.getElementById('cancelConfirmModal').style.display = 'none';
+
+        // Buchung stornieren
+        document.getElementById('confirmCancel').onclick = () => {
+            const slotToCancel = document.getElementById('cancelDetails').textContent.split(", ")[0].split(": ")[1]; // Slot extrahieren
+            updateTimeSlot(slotToCancel, false); // Zeitblock als verfügbar markieren
+            removeBookingFromTable(slotToCancel);
+            document.getElementById('cancelConfirmModal').style.display = 'none';
+            showFeedbackPopup("Buchung erfolgreich storniert!");
+        };
+
+        function removeBookingFromTable(slot) {
+            const tableBody = document.querySelector('#bookingTable tbody');
+            const rows = Array.from(tableBody.querySelectorAll('tr'));
+            rows.forEach(row => {
+                if (row.cells[0].textContent === slot) {
+                    tableBody.removeChild(row);
+                }
+            });
+        }
+
+        // Datum wechseln
+        document.getElementById('prevDay').onclick = () => {
+            currentDate.setDate(currentDate.getDate() - 1);
+            updateDateDisplay();
+            generateTimeSlots();
+        };
+
+        document.getElementById('nextDay').onclick = () => {
+            currentDate.setDate(currentDate.getDate() + 1);
+            updateDateDisplay();
+            generateTimeSlots();
+        };
+
+        // Initiales Setup
+        updateDateDisplay();
+        generateTimeSlots();
+    </script>
+</body>
+</html>
